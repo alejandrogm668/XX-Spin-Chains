@@ -60,7 +60,7 @@ def get_rows_columns(n_sites):
 
 def get_sparse_pure_hamiltonian(n_sites,J,h):
     
-    sh = 2**n_sites # Shape
+    sh = 2**n_sites 
     
     row_xy, column_xy = get_rows_columns(n_sites)
     data_xy = np.full((1,len(row_xy)),2.0*J).flatten()
@@ -76,3 +76,44 @@ def get_sparse_pure_hamiltonian(n_sites,J,h):
 
 def get_ground_state_energy(H):
     return eigsh(H,k=1,which='SA',return_eigenvectors=False)
+
+
+
+def get_impure_diagonal(h,δh,distance,n_sites):
+    
+    if n_sites%2==0:
+        assert distance%2==0, 'Configuration is not symmetrical'
+        imps_locations = [int((n_sites-distance-1)/2),int((n_sites+distance)/2)]
+    else: 
+        assert distance%2==1, 'Configuration is not symmetrical' 
+        imps_locations = [int((n_sites-distance-2)/2),int((n_sites+distance)/2)]
+    
+    S = np.zeros((2**n_sites))
+    
+    for i in range(2**(n_sites)):
+        suma = 0
+        for j in range(n_sites):
+            if j in imps_locations:
+                suma += (h+δh)*(-1)**np.floor(i/(2**j))
+            else: 
+                suma += h*(-1)**np.floor(i/(2**j))
+
+        S[i] = suma
+        
+    return S
+
+
+
+def get_sparse_impure_hamiltonian(n_sites,J,h,δh,distance):
+    
+    sh = 2**n_sites
+    
+    row_xy, column_xy = get_rows_columns(n_sites)
+    data_xy = np.full((1,len(row_xy)),2.0*J).flatten()
+    H_xy = csc_array((data_xy, (row_xy,column_xy)), shape=(sh, sh))
+
+    data_z = -get_impure_diagonal(h,δh,distance,n_sites)
+    row_z = np.arange(sh)
+    H_z = csc_array((data_z, (row_z,row_z)), shape=(sh, sh))
+
+    return H_xy + H_z  
